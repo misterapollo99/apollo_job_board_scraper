@@ -7,26 +7,38 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
   const [current, setCurrent] = useState(0);
   const [total] = useState(companies.length);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState(null);
   const startedRef = useRef(false);
+  const resultsRef = useRef([]);
 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    const eventSource = new EventSource(
-      // We can't use EventSource with POST, so we'll use fetch with streaming
-      // Actually, let's use fetch with ReadableStream
-    );
-
-    // Use fetch with streaming for POST+SSE
     const runEnrichment = async () => {
       try {
+        console.log('[StepEnrich] Starting enrichment for', companies.length, 'companies');
         const res = await fetch('/api/enrich', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ companies }),
         });
 
+        if (!res.ok) {
+          let errMsg = `Server error (${res.status})`;
+          try {
+            const errBody = await res.json();
+            errMsg = errBody.error || errMsg;
+          } catch {
+            // Could not parse error body
+          }
+          console.error('[StepEnrich] Server returned error:', errMsg);
+          setError(errMsg);
+          setDone(true);
+          return;
+        }
+
+        console.log('[StepEnrich] SSE stream connected, reading response...');
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -43,6 +55,7 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
             if (line.startsWith('data: ')) {
               try {
                 const event = JSON.parse(line.slice(6));
+                console.log('[StepEnrich] Event received:', event.type, event.company || '');
 
                 if (event.type === 'progress') {
                   setCurrent(event.current);
@@ -69,11 +82,14 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
                     }
                     return next;
                   });
+                  if (event.data) {
+                    resultsRef.current = [...resultsRef.current, event.data];
+                  }
                 }
 
                 if (event.type === 'complete') {
+                  console.log('[StepEnrich] Enrichment complete:', event.successful, 'succeeded,', event.failed, 'failed');
                   setDone(true);
-                  // Wait a moment, then advance
                   setTimeout(() => {
                     onComplete(event.results);
                   }, 1500);
@@ -84,14 +100,38 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
             }
           }
         }
+
+        // If the stream ended without a 'complete' event, handle gracefully
+        setDone(prev => {
+          if (!prev) {
+            console.warn('[StepEnrich] Stream ended without complete event, using partial results');
+            if (resultsRef.current.length > 0) {
+              setTimeout(() => onComplete(resultsRef.current), 1500);
+            } else {
+              setError('Enrichment stream ended unexpectedly with no results.');
+            }
+            return true;
+          }
+          return prev;
+        });
       } catch (err) {
-        console.error('Enrichment stream error:', err);
+        console.error('[StepEnrich] Enrichment stream error:', err);
+        setError(err.message || 'Connection to enrichment server failed');
         setDone(true);
       }
     };
 
     runEnrichment();
   }, [companies, onComplete]);
+
+  const handleViewResults = () => {
+    const partialResults = resultsRef.current.length > 0
+      ? resultsRef.current
+      : statuses
+          .filter(s => s.data)
+          .map(s => s.data);
+    onComplete(partialResults);
+  };
 
   const completed = statuses.filter(s => s.status === 'complete' || s.status === 'failed').length;
   const progressPct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -108,28 +148,57 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
         </p>
       </div>
 
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-red-800">Enrichment Error</p>
+              <p className="text-sm text-red-600 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Progress bar */}
       <div className="card p-6 mb-6">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-semibold text-navy">
-            {done ? 'Enrichment Complete' : `Enriching ${Math.min(current, total)} of ${total} companies...`}
+            {done
+              ? (error ? 'Enrichment Failed' : 'Enrichment Complete')
+              : `Enriching ${Math.min(current, total)} of ${total} companies...`}
           </span>
           <span className="text-sm font-bold text-accent">{progressPct}%</span>
         </div>
         <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ease-out ${
-              done ? 'bg-emerald-500' : 'bg-accent progress-animate'
+              done ? (error ? 'bg-red-400' : 'bg-emerald-500') : 'bg-accent progress-animate'
             }`}
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        {done && (
+        {done && !error && (
           <p className="text-sm text-emerald-600 font-medium mt-3 text-center">
             All companies processed. Loading results...
           </p>
         )}
       </div>
+
+      {/* Fallback button */}
+      {done && (
+        <div className="text-center mb-6">
+          <button
+            onClick={handleViewResults}
+            className="btn-primary"
+          >
+            {error ? 'View Partial Results' : 'View Results Now'}
+          </button>
+        </div>
+      )}
 
       {/* Company status list */}
       <div className="card divide-y divide-slate-50">

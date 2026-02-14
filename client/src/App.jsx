@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import StepScrape from './components/StepScrape';
@@ -19,12 +19,12 @@ export default function App() {
   const [hasApiKey, setHasApiKey] = useState(false);
 
   // Check API key on mount
-  useState(() => {
+  useEffect(() => {
     fetch('/api/config')
       .then(res => res.json())
       .then(data => setHasApiKey(data.hasApiKey))
       .catch(() => {});
-  });
+  }, []);
 
   const handleScrapeComplete = useCallback((jobs, source) => {
     setScrapedJobs(jobs);

@@ -6,12 +6,16 @@ const { calculateICPScore } = require('../services/scoring');
 router.post('/', async (req, res) => {
   const { companies } = req.body;
 
+  console.log('[enrich] POST /api/enrich called with', companies?.length || 0, 'companies');
+
   if (!companies || !Array.isArray(companies) || companies.length === 0) {
+    console.log('[enrich] Error: No companies provided');
     return res.status(400).json({ error: 'No companies provided' });
   }
 
   const apiKey = req.store.apolloApiKey;
   if (!apiKey || apiKey === 'your_apollo_api_key_here') {
+    console.log('[enrich] Error: Apollo API key not configured');
     return res.status(400).json({ error: 'Apollo API key not configured. Please set it in API Settings.' });
   }
 
@@ -20,12 +24,17 @@ router.post('/', async (req, res) => {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
   });
+
+  // Send initial keepalive to confirm connection
+  res.write(':ok\n\n');
 
   const enrichedResults = [];
 
   for (let i = 0; i < companies.length; i++) {
     const job = companies[i];
+    console.log(`[enrich] Processing company ${i + 1}/${companies.length}: ${job.company}`);
 
     // Send progress update
     res.write(
@@ -49,6 +58,7 @@ router.post('/', async (req, res) => {
       enrichedData.icp_max_score = icpResult.maxScore;
 
       enrichedResults.push(enrichedData);
+      console.log(`[enrich] Company ${job.company}: ${enrichedData.enrichment_status}, ICP score: ${icpResult.score}`);
 
       res.write(
         `data: ${JSON.stringify({
@@ -61,6 +71,7 @@ router.post('/', async (req, res) => {
         })}\n\n`
       );
     } catch (err) {
+      console.error(`[enrich] Company ${job.company} failed:`, err.message);
       const failedEntry = {
         scraped_job_title: job.title,
         scraped_job_url: job.url,
@@ -89,6 +100,8 @@ router.post('/', async (req, res) => {
 
   // Store enriched data
   req.store.enrichedCompanies = enrichedResults;
+
+  console.log(`[enrich] All done. ${enrichedResults.filter(r => r.enrichment_status === 'success').length} succeeded, ${enrichedResults.filter(r => r.enrichment_status === 'failed').length} failed`);
 
   // Send completion event
   res.write(
