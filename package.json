@@ -1,0 +1,22 @@
+{
+  "name": "simpleonboard-apollo-app",
+  "version": "1.0.0",
+  "description": "SimpleOnboard.io Prospect Intelligence Engine - Apollo enrichment demo app",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "NODE_ENV=production node server/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cheerio": "^1.0.0-rc.12",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "json2csv": "^6.0.0-alpha.2"
+  }
+}
