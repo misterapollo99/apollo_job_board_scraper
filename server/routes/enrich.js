@@ -43,6 +43,7 @@ router.post('/', async (req, res) => {
         current: i + 1,
         total: companies.length,
         company: job.company,
+        index: i,
         status: 'enriching',
       })}\n\n`
     );
@@ -66,6 +67,8 @@ router.post('/', async (req, res) => {
           current: i + 1,
           total: companies.length,
           company: job.company,
+          index: i,
+          enrichment_status: enrichedData.enrichment_status,
           status: enrichedData.enrichment_status === 'success' ? 'complete' : 'failed',
           data: enrichedData,
         })}\n\n`
@@ -76,6 +79,7 @@ router.post('/', async (req, res) => {
         scraped_job_title: job.title,
         scraped_job_url: job.url,
         company_name: job.company,
+        location: job.location,
         domain: job.domain || '',
         enrichment_status: 'failed',
         error: err.message,
@@ -90,6 +94,8 @@ router.post('/', async (req, res) => {
           current: i + 1,
           total: companies.length,
           company: job.company,
+          index: i,
+          enrichment_status: 'failed',
           status: 'failed',
           error: err.message,
           data: failedEntry,
@@ -101,7 +107,7 @@ router.post('/', async (req, res) => {
   // Store enriched data
   req.store.enrichedCompanies = enrichedResults;
 
-  console.log(`[enrich] All done. ${enrichedResults.filter(r => r.enrichment_status === 'success').length} succeeded, ${enrichedResults.filter(r => r.enrichment_status === 'failed').length} failed`);
+  console.log(`[enrich] All done. ${enrichedResults.filter(r => r.enrichment_status === 'success').length} succeeded, ${enrichedResults.filter(r => r.enrichment_status === 'failed').length} failed, ${enrichedResults.filter(r => r.enrichment_status === 'not_found').length} not found`);
 
   // Send completion event
   res.write(
@@ -110,6 +116,7 @@ router.post('/', async (req, res) => {
       total: companies.length,
       successful: enrichedResults.filter(r => r.enrichment_status === 'success').length,
       failed: enrichedResults.filter(r => r.enrichment_status === 'failed').length,
+      not_found: enrichedResults.filter(r => r.enrichment_status === 'not_found').length,
       results: enrichedResults,
     })}\n\n`
   );

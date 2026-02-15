@@ -39,6 +39,60 @@ export default function CompanyCard({ company }) {
             <p className="text-xs text-red-500">Enrichment failed</p>
           </div>
         </div>
+        {company.error && (
+          <p className="text-xs text-red-400 mt-2">{company.error}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (company.enrichment_status === 'not_found') {
+    return (
+      <div className="card p-5">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-sm">
+            {(company.company_name || '?')[0]}
+          </div>
+          <div className="flex-1">
+            <h3 className="font-heading font-bold text-navy">{company.company_name}</h3>
+            <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-full font-medium mt-1">
+              Enrichment Not Available
+            </span>
+          </div>
+        </div>
+        
+        {/* Show scraped data */}
+        {company.scraped_job_title && (
+          <div className="mb-3 px-3 py-2 bg-orange-50 border border-orange-100 rounded-lg">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-orange-500 font-medium">Hiring:</span>
+              <span className="text-orange-700 font-semibold truncate">{company.scraped_job_title}</span>
+            </div>
+          </div>
+        )}
+        
+        {company.location && (
+          <div className="text-xs text-slate-500 mb-2">
+            <span className="font-medium">Location:</span> {company.location}
+          </div>
+        )}
+        
+        {company.error && (
+          <p className="text-xs text-slate-400 mt-2">{company.error}</p>
+        )}
+        
+        {company.scraped_job_url && (
+          <div className="mt-3 pt-3 border-t border-slate-50">
+            <a
+              href={company.scraped_job_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-medium text-accent hover:underline"
+            >
+              View Job Post →
+            </a>
+          </div>
+        )}
       </div>
     );
   }

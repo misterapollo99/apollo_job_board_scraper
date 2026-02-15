@@ -10,6 +10,11 @@ export default function StepResults({ companies, onExport }) {
     [companies]
   );
 
+  const notFoundCompanies = useMemo(
+    () => companies.filter(c => c.enrichment_status === 'not_found'),
+    [companies]
+  );
+
   const sorted = useMemo(() => {
     const arr = [...successfulCompanies];
     arr.sort((a, b) => {
@@ -71,9 +76,12 @@ export default function StepResults({ companies, onExport }) {
         <div>
           <h2 className="font-heading font-bold text-2xl text-navy">Enriched Results</h2>
           <p className="text-slate-500 text-sm mt-1">
-            {successfulCompanies.length} companies enriched and scored
+            {successfulCompanies.length} of {companies.length} companies enriched successfully
+            {notFoundCompanies.length > 0 && (
+              <span className="text-slate-400 ml-1">| {notFoundCompanies.length} not found</span>
+            )}
             {failedCompanies.length > 0 && (
-              <span className="text-red-500 ml-1">({failedCompanies.length} failed)</span>
+              <span className="text-red-500 ml-1">| {failedCompanies.length} failed</span>
             )}
           </p>
         </div>
@@ -146,6 +154,20 @@ export default function StepResults({ companies, onExport }) {
           <CompanyCard key={idx} company={company} />
         ))}
       </div>
+
+      {/* Not found companies */}
+      {notFoundCompanies.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-heading font-semibold text-lg text-slate-500 mb-3">
+            Companies Not Found in Apollo
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {notFoundCompanies.map((company, idx) => (
+              <CompanyCard key={idx} company={company} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Failed companies */}
       {failedCompanies.length > 0 && (

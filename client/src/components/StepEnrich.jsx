@@ -2,7 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 
 export default function StepEnrich({ companies, onComplete, onProgress }) {
   const [statuses, setStatuses] = useState(() =>
-    companies.map(c => ({ company: c.company, status: 'pending', data: null }))
+    companies.map((c, index) => ({ 
+      company: c.company, 
+      status: 'pending', 
+      data: null,
+      originalIndex: index // Track original index for guaranteed mapping
+    }))
   );
   const [current, setCurrent] = useState(0);
   const [total] = useState(companies.length);
@@ -18,6 +23,8 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
     const runEnrichment = async () => {
       try {
         console.log('[StepEnrich] Starting enrichment for', companies.length, 'companies');
+        console.log('[StepEnrich] Companies:', companies.map(c => c.company));
+        
         const res = await fetch('/api/enrich', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -42,6 +49,7 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let processedCount = 0;
 
         while (true) {
           const { done: readerDone, value } = await reader.read();
@@ -55,47 +63,112 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
             if (line.startsWith('data: ')) {
               try {
                 const event = JSON.parse(line.slice(6));
-                console.log('[StepEnrich] Event received:', event.type, event.company || '');
+                console.log('[StepEnrich] Event received:', event.type, 'company:', event.company || 'N/A', 'index:', event.index);
 
                 if (event.type === 'progress') {
                   setCurrent(event.current);
                   setStatuses(prev => {
                     const next = [...prev];
-                    const idx = next.findIndex(s => s.company === event.company);
+                    // Try to find by index first (most reliable), then by company name
+                    let idx = -1;
+                    if (event.index !== undefined && event.index >= 0 && event.index < next.length) {
+                      idx = event.index;
+                    } else if (event.company) {
+                      idx = next.findIndex(s => s.company === event.company);
+                    }
+                    
                     if (idx >= 0) {
+                      console.log(`[StepEnrich] Updating status for "${next[idx].company}" (index ${idx}) to enriching`);
                       next[idx] = { ...next[idx], status: 'enriching' };
+                    } else {
+                      console.warn('[StepEnrich] Could not find company for progress event:', event);
                     }
                     return next;
                   });
                 }
 
                 if (event.type === 'company_done') {
+                  processedCount++;
                   setStatuses(prev => {
                     const next = [...prev];
-                    const idx = next.findIndex(s => s.company === event.company);
+                    // Try to find by index first (most reliable), then by company name
+                    let idx = -1;
+                    if (event.index !== undefined && event.index >= 0 && event.index < next.length) {
+                      idx = event.index;
+                    } else if (event.company) {
+                      idx = next.findIndex(s => s.company === event.company);
+                    }
+                    
                     if (idx >= 0) {
+                      let newStatus = 'failed';
+                      if (event.enrichment_status === 'success') {
+                        newStatus = 'complete';
+                      } else if (event.enrichment_status === 'not_found') {
+                        newStatus = 'not_found';
+                      }
+                      
+                      console.log(`[StepEnrich] Marking "${next[idx].company}" (index ${idx}) as ${newStatus}`);
+                      
+                      // Ensure we preserve the correct company name from our original list
+                      const originalCompanyName = next[idx].company;
+                      
                       next[idx] = {
                         ...next[idx],
-                        status: event.status === 'complete' ? 'complete' : 'failed',
-                        data: event.data,
+                        status: newStatus,
+                        data: event.data ? {
+                          ...event.data,
+                          company_name: originalCompanyName // Force correct company name
+                        } : null,
                       };
+                    } else {
+                      console.warn('[StepEnrich] Could not find company for company_done event:', event);
                     }
                     return next;
                   });
+                  
+                  // Store result with the correct company name
                   if (event.data) {
-                    resultsRef.current = [...resultsRef.current, event.data];
+                    setStatuses(prev => {
+                      let idx = -1;
+                      if (event.index !== undefined && event.index >= 0 && event.index < prev.length) {
+                        idx = event.index;
+                      } else if (event.company) {
+                        idx = prev.findIndex(s => s.company === event.company);
+                      }
+                      
+                      const correctedData = idx >= 0 ? {
+                        ...event.data,
+                        company_name: prev[idx].company // Use company name from our state
+                      } : event.data;
+                      
+                      resultsRef.current = [...resultsRef.current, correctedData];
+                      return prev;
+                    });
                   }
                 }
 
                 if (event.type === 'complete') {
                   console.log('[StepEnrich] Enrichment complete:', event.successful, 'succeeded,', event.failed, 'failed');
+                  console.log('[StepEnrich] Results:', event.results);
                   setDone(true);
+                  
+                  // Ensure all results have the correct company names
+                  const correctedResults = event.results?.map((result, idx) => {
+                    // Try to match by index or find the corresponding company
+                    const originalCompany = companies[idx]?.company || 
+                                          companies.find(c => c.company === result.company)?.company;
+                    return {
+                      ...result,
+                      company: originalCompany || result.company
+                    };
+                  }) || resultsRef.current;
+                  
                   setTimeout(() => {
-                    onComplete(event.results);
+                    onComplete(correctedResults);
                   }, 1500);
                 }
-              } catch {
-                // Skip malformed events
+              } catch (err) {
+                console.error('[StepEnrich] Failed to parse event:', line, err);
               }
             }
           }
@@ -133,7 +206,7 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
     onComplete(partialResults);
   };
 
-  const completed = statuses.filter(s => s.status === 'complete' || s.status === 'failed').length;
+  const completed = statuses.filter(s => s.status === 'complete' || s.status === 'failed' || s.status === 'not_found').length;
   const progressPct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
@@ -226,6 +299,13 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
                   </svg>
                 </div>
               )}
+              {item.status === 'not_found' && (
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              )}
               {item.status === 'failed' && (
                 <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
                   <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -245,6 +325,9 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
                   <span className="text-emerald-600">
                     Enriched — ICP Score: {item.data?.icp_score || 'N/A'}
                   </span>
+                )}
+                {item.status === 'not_found' && (
+                  <span className="text-slate-500">Company not found in Apollo</span>
                 )}
                 {item.status === 'failed' && (
                   <span className="text-red-500">Enrichment failed</span>
