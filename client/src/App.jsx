@@ -6,6 +6,9 @@ import StepReview from './components/StepReview';
 import StepEnrich from './components/StepEnrich';
 import StepResults from './components/StepResults';
 import StepExport from './components/StepExport';
+import StepSelectCompany from './components/StepSelectCompany';
+import StepFindContacts from './components/StepFindContacts';
+import StepExportContacts from './components/StepExportContacts';
 import ApiKeyModal from './components/ApiKeyModal';
 
 export default function App() {
@@ -17,6 +20,11 @@ export default function App() {
   const [scrapeSource, setScrapeSource] = useState('');
   const [showApiModal, setShowApiModal] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
+  
+  // People enrichment state
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [contacts, setContacts] = useState([]);
+  const [creditsUsed, setCreditsUsed] = useState({ emails: 0, phones: 0 });
 
   // Check API key on mount
   useEffect(() => {
@@ -46,6 +54,18 @@ export default function App() {
     setCurrentStep(5);
   }, []);
 
+  const handleCompanySelected = useCallback((company) => {
+    setSelectedCompany(company);
+    setCurrentStep(7);
+  }, []);
+
+  const handleContactsFound = useCallback((foundContacts, company, credits) => {
+    setContacts(foundContacts);
+    setSelectedCompany(company);
+    setCreditsUsed(credits);
+    setCurrentStep(9);
+  }, []);
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -72,6 +92,7 @@ export default function App() {
           <StepResults
             companies={enrichedCompanies}
             onExport={handleGoToExport}
+            onFindContacts={() => setCurrentStep(6)}
           />
         );
       case 5:
@@ -79,6 +100,30 @@ export default function App() {
           <StepExport
             companies={enrichedCompanies}
             onBack={() => setCurrentStep(4)}
+          />
+        );
+      case 6:
+        return (
+          <StepSelectCompany
+            companies={enrichedCompanies}
+            onSelect={handleCompanySelected}
+          />
+        );
+      case 7:
+        return (
+          <StepFindContacts
+            selectedCompany={selectedCompany}
+            onComplete={handleContactsFound}
+            onBack={() => setCurrentStep(6)}
+          />
+        );
+      case 9:
+        return (
+          <StepExportContacts
+            contacts={contacts}
+            selectedCompany={selectedCompany}
+            creditsUsed={creditsUsed}
+            onBack={() => setCurrentStep(7)}
           />
         );
       default:
@@ -92,6 +137,12 @@ export default function App() {
   if (enrichedCompanies.length > 0) {
     completedSteps.add(3);
     completedSteps.add(4);
+    completedSteps.add(5);
+  }
+  if (selectedCompany) completedSteps.add(6);
+  if (contacts.length > 0) {
+    completedSteps.add(7);
+    completedSteps.add(8);
   }
 
   return (

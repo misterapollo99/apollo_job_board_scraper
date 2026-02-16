@@ -6,6 +6,7 @@ const path = require('path');
 const scrapeRoutes = require('./routes/scrape');
 const enrichRoutes = require('./routes/enrich');
 const exportRoutes = require('./routes/export');
+const peopleRoutes = require('./routes/people');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +31,7 @@ app.use((req, res, next) => {
 app.use('/api/scrape', scrapeRoutes);
 app.use('/api/enrich', enrichRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/people', peopleRoutes);
 
 // API key management
 app.get('/api/config', (req, res) => {
