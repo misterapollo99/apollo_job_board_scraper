@@ -33,7 +33,7 @@ export default function StepScrape({ onComplete }) {
 
     try {
       const cats = Array.from(selectedCategories).join(',');
-      const res = await fetch(`/api/scrape?categories=${encodeURIComponent(cats)}`);
+      const res = await fetch(`${API_BASE_URL}/api/scrape?categories=${encodeURIComponent(cats)}`);
       const data = await res.json();
 
       if (data.success && data.jobs && data.jobs.length > 0) {
