@@ -10,7 +10,7 @@ export default function StepExport({ companies, onBack }) {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/export');
+      const res = await fetch(`${API_BASE_URL}/api/export`);
       if (!res.ok) throw new Error('Export failed');
 
       const blob = await res.blob();
