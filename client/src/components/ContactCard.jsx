@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import { useState } from 'react';
 
 export default function ContactCard({ contact, onEnrichEmail, onEnrichPhone }) {

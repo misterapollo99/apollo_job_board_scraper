@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import { useState } from 'react';
 
 export default function StepExportContacts({ contacts, selectedCompany, creditsUsed, onBack }) {
@@ -9,7 +10,7 @@ export default function StepExportContacts({ contacts, selectedCompany, creditsU
     setExportError(null);
 
     try {
-      const response = await fetch('/api/people/export', {
+      const response = await fetch(`${API_BASE_URL}/api/people/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

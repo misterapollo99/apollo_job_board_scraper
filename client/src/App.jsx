@@ -1,3 +1,5 @@
+import { API_BASE_URL } from './config';
+import { API_BASE_URL } from './config';
 import { useState, useCallback, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -28,7 +30,7 @@ export default function App() {
 
   // Check API key on mount
   useEffect(() => {
-    fetch('/api/config')
+    fetch(`${API_BASE_URL}/api/config`)
       .then(res => res.json())
       .then(data => setHasApiKey(data.hasApiKey))
       .catch(() => {});

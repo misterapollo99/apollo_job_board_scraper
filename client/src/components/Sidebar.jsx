@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 const COMPANY_STEPS = [
   { number: 1, label: 'Scrape Jobs', description: 'Fetch job board data' },
   { number: 2, label: 'Review Data', description: 'Select companies' },

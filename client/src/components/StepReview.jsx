@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import { useState, useMemo } from 'react';
 
 export default function StepReview({ jobs, source, onComplete, onBack }) {

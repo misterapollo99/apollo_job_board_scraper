@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import { useState } from 'react';
 
 export default function ApiKeyModal({ onClose, onSave }) {
@@ -13,14 +14,14 @@ export default function ApiKeyModal({ onClose, onSave }) {
 
     try {
       // Save key first
-      await fetch('/api/config/api-key', {
+      await fetch(`${API_BASE_URL}/api/config/api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: apiKey.trim() }),
       });
 
       // Test it
-      const res = await fetch('/api/config/test-key', { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/api/config/test-key', { method: 'POST' });
       const data = await res.json();
 
       if (res.ok) {
@@ -39,7 +40,7 @@ export default function ApiKeyModal({ onClose, onSave }) {
     if (!apiKey.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/config/api-key', {
+      const res = await fetch(`${API_BASE_URL}/api/config/api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: apiKey.trim() }),

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import { useState, useCallback } from 'react';
 import ContactCard from './ContactCard';
 
@@ -13,7 +14,7 @@ export default function StepFindContacts({ selectedCompany, onComplete, onBack }
     setSearchError(null);
 
     try {
-      const response = await fetch('/api/people/search', {
+      const response = await fetch(`${API_BASE_URL}/api/people/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -61,7 +62,7 @@ export default function StepFindContacts({ selectedCompany, onComplete, onBack }
     );
 
     try {
-      const response = await fetch('/api/people/enrich', {
+      const response = await fetch(`${API_BASE_URL}/api/people/enrich', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +108,7 @@ export default function StepFindContacts({ selectedCompany, onComplete, onBack }
     );
 
     try {
-      const response = await fetch('/api/people/enrich', {
+      const response = await fetch(`${API_BASE_URL}/api/people/enrich', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

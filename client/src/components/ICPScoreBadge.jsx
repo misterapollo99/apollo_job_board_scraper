@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 export default function ICPScoreBadge({ score, size = 'md' }) {
   const getColor = (s) => {
     if (s >= 80) return { bg: 'bg-emerald-50', text: 'text-emerald-700', bar: 'bg-emerald-500', border: 'border-emerald-200' };

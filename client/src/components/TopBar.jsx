@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 export default function TopBar({ onApiSettings, hasApiKey }) {
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">

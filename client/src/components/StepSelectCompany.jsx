@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import { useState, useMemo } from 'react';
 import ICPScoreBadge from './ICPScoreBadge';
 

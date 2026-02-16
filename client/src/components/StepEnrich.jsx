@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import { useState, useEffect, useRef } from 'react';
 
 export default function StepEnrich({ companies, onComplete, onProgress }) {
@@ -25,7 +26,7 @@ export default function StepEnrich({ companies, onComplete, onProgress }) {
         console.log('[StepEnrich] Starting enrichment for', companies.length, 'companies');
         console.log('[StepEnrich] Companies:', companies.map(c => c.company));
         
-        const res = await fetch('/api/enrich', {
+        const res = await fetch(`${API_BASE_URL}/api/enrich', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ companies }),
