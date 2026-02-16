@@ -2,7 +2,7 @@
   "name": "simpleonboard-apollo-app",
   "version": "1.0.0",
   "engines": {
-    "node": "22.x"},
+    "node": "22.x"}
   "description": "SimpleOnboard.io Prospect Intelligence Engine - Apollo enrichment demo app",
   "private": true,
   "scripts": {
