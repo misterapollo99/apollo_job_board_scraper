@@ -70,8 +70,6 @@ app.post('/api/config/test-key', async (req, res) => {
     if (err.response && err.response.status === 401) {
       return res.status(401).json({ error: 'Invalid API key' });
     }
-    // Some Apollo endpoints return 200 even for valid keys on different routes
-    // Try an org search as a test
     try {
       const axios = require('axios');
       const response = await axios.post(
@@ -95,14 +93,6 @@ app.post('/api/config/test-key', async (req, res) => {
     }
   }
 });
-
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
-  });
-}
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
