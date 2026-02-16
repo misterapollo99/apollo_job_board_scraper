@@ -1,5 +1,4 @@
 import { API_BASE_URL } from './config';
-import { API_BASE_URL } from './config';
 import { useState, useCallback, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
