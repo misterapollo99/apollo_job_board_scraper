@@ -98,3 +98,4 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Apollo API Key: ${store.apolloApiKey && store.apolloApiKey !== 'your_apollo_api_key_here' ? 'Configured' : 'Not set'}`);
 });
+
